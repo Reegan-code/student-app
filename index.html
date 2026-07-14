@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Student Record System Pro</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { 
@@ -11,7 +12,7 @@
             background: #f4f7fa; 
             padding: 20px;
         }
-        .header { 
+       .header { 
             background: linear-gradient(135deg, #1e40af, #3b82f6); 
             color: white; 
             padding: 25px; 
@@ -19,22 +20,29 @@
             margin-bottom: 25px;
             box-shadow: 0 4px 6px rgba(0,0,0,0.1);
         }
-        .header h1 { font-size: 28px; margin-bottom: 5px; }
-        .header p { opacity: 0.9; }
-        .container { 
-            max-width: 900px; 
+       .header h1 { font-size: 28px; margin-bottom: 5px; }
+       .header p { opacity: 0.9; }
+       .container { 
+            max-width: 1200px; 
             margin: 0 auto; 
             background: white; 
             padding: 30px; 
             border-radius: 12px; 
             box-shadow: 0 2px 8px rgba(0,0,0,0.08);
         }
-        .form-group { margin-bottom: 18px; }
+       .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+       .form-group { margin-bottom: 15px; }
         label { 
             display: block; 
             margin-bottom: 6px; 
             font-weight: 600; 
             color: #374151;
+            font-size: 14px;
         }
         input, select { 
             width: 100%; 
@@ -50,21 +58,33 @@
         button { 
             background: #2563eb; 
             color: white; 
-            padding: 12px 24px; 
+            padding: 10px 20px; 
             border: none; 
             border-radius: 8px; 
             cursor: pointer; 
-            font-size: 16px;
+            font-size: 15px;
             font-weight: 600;
             margin-right: 10px;
+            margin-bottom: 10px;
         }
         button:hover { background: #1d4ed8; }
-        .btn-delete { background: #dc2626; }
-        .btn-delete:hover { background: #b91c1c; }
+       .btn-delete { background: #dc2626; padding: 6px 12px; font-size: 14px; }
+       .btn-delete:hover { background: #b91c1c; }
+       .btn-export { background: #059669; }
+       .btn-export:hover { background: #047857; }
+       .btn-secondary { background: #6b7280; }
+       .btn-secondary:hover { background: #4b5563; }
+       .controls {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin: 20px 0;
+            align-items: center;
+        }
         table { 
             width: 100%; 
             border-collapse: collapse; 
-            margin-top: 25px;
+            margin-top: 20px;
         }
         th, td { 
             border: 1px solid #e5e7eb; 
@@ -75,21 +95,32 @@
             background: #f9fafb; 
             font-weight: 600;
             color: #374151;
+            cursor: pointer;
+            user-select: none;
         }
-        .stats { 
+        th:hover { background: #f3f4f6; }
+       .stats { 
             display: grid; 
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); 
             gap: 15px; 
             margin: 25px 0;
         }
-        .stat-card { 
+       .stat-card { 
             background: #eff6ff; 
             padding: 20px; 
             border-radius: 8px; 
             border-left: 4px solid #3b82f6;
         }
-        .stat-card h3 { color: #1e40af; font-size: 14px; margin-bottom: 5px; }
-        .stat-card p { font-size: 24px; font-weight: 700; color: #1e3a8a; }
+       .stat-card h3 { color: #1e40af; font-size: 14px; margin-bottom: 5px; }
+       .stat-card p { font-size: 24px; font-weight: 700; color: #1e3a8a; }
+       .chart-container { 
+            margin: 30px 0; 
+            height: 320px;
+            padding: 20px;
+            background: #f9fafb;
+            border-radius: 8px;
+        }
+        #searchInput { max-width: 300px; }
     </style>
 </head>
 <body>
@@ -97,3 +128,243 @@
         <h1>Student Record System Pro</h1>
         <p>Manage student data efficiently</p>
     </div>
+
+    <div class="container">
+        <h2>Add New Student</h2>
+        <div class="form-grid">
+            <div class="form-group">
+                <label>Student Name:</label>
+                <input type="text" id="name" placeholder="Enter full name">
+            </div>
+            <div class="form-group">
+                <label>Student ID:</label>
+                <input type="text" id="studentId" placeholder="Enter ID number">
+            </div>
+            <div class="form-group">
+                <label>Course:</label>
+                <select id="course">
+                    <option value="">Select Course</option>
+                    <option>Computer Science</option>
+                    <option>Business Admin</option>
+                    <option>Engineering</option>
+                    <option>Medicine</option>
+                    <option>Education</option>
+                    <option>Law</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Grade (0-100):</label>
+                <input type="number" id="grade" placeholder="Enter grade" min="0" max="100">
+            </div>
+        </div>
+        <button onclick="addStudent()">Add Student</button>
+        <button class="btn-secondary" onclick="clearForm()">Clear Form</button>
+
+        <div class="stats">
+            <div class="stat-card">
+                <h3>Total Students</h3>
+                <p id="totalStudents">0</p>
+            </div>
+            <div class="stat-card">
+                <h3>Average Grade</h3>
+                <p id="avgGrade">-</p>
+            </div>
+            <div class="stat-card">
+                <h3>Highest Grade</h3>
+                <p id="highGrade">-</p>
+            </div>
+            <div class="stat-card">
+                <h3>Lowest Grade</h3>
+                <p id="lowGrade">-</p>
+            </div>
+        </div>
+
+        <div class="chart-container">
+            <canvas id="gradeChart"></canvas>
+        </div>
+
+        <h2>Student Records</h2>
+        <div class="controls">
+            <input type="text" id="searchInput" placeholder="Search by name, ID, or course..." onkeyup="searchStudents()">
+            <button class="btn-export" onclick="exportCSV()">Export CSV</button>
+            <button class="btn-secondary" onclick="sortTable('name')">Sort by Name</button>
+            <button class="btn-secondary" onclick="sortTable('grade')">Sort by Grade</button>
+            <button class="btn-secondary" onclick="sortTable('course')">Sort by Course</button>
+        </div>
+        
+        <table id="studentTable">
+            <thead>
+                <tr>
+                    <th onclick="sortTable('name')">Name ↕</th>
+                    <th onclick="sortTable('studentId')">Student ID ↕</th>
+                    <th onclick="sortTable('course')">Course ↕</th>
+                    <th onclick="sortTable('grade')">Grade ↕</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody id="tableBody"></tbody>
+        </table>
+    </div>
+
+    <script>
+        let students = JSON.parse(localStorage.getItem('students')) || [];
+        let chart;
+        let sortDirection = {};
+        
+        function displayStudents(filtered = students) {
+            const tbody = document.getElementById('tableBody');
+            tbody.innerHTML = '';
+            if (filtered.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#6b7280;">No students yet. Add one above!</td></tr>';
+            } else {
+                filtered.forEach((student, index) => {
+                    const realIndex = students.indexOf(student);
+                    tbody.innerHTML += `
+                        <tr>
+                            <td>${student.name}</td>
+                            <td>${student.studentId}</td>
+                            <td>${student.course}</td>
+                            <td>${student.grade}</td>
+                            <td><button class="btn-delete" onclick="deleteStudent(${realIndex})">Delete</button></td>
+                        </tr>
+                    `;
+                });
+            }
+            updateStats();
+            updateChart();
+        }
+        
+        function addStudent() {
+            const name = document.getElementById('name').value.trim();
+            const studentId = document.getElementById('studentId').value.trim();
+            const course = document.getElementById('course').value;
+            const grade = parseFloat(document.getElementById('grade').value);
+            
+            if (!name ||!studentId ||!course || isNaN(grade) || grade < 0 || grade > 100) {
+                alert('Please fill all fields. Grade must be 0-100');
+                return;
+            }
+            
+            if (students.some(s => s.studentId === studentId)) {
+                alert('Student ID already exists!');
+                return;
+            }
+            
+            students.push({ name, studentId, course, grade });
+            localStorage.setItem('students', JSON.stringify(students));
+            displayStudents();
+            clearForm();
+        }
+        
+        function deleteStudent(index) {
+            if (confirm('Delete this student?')) {
+                students.splice(index, 1);
+                localStorage.setItem('students', JSON.stringify(students));
+                displayStudents();
+            }
+        }
+        
+        function clearForm() {
+            document.getElementById('name').value = '';
+            document.getElementById('studentId').value = '';
+            document.getElementById('course').value = '';
+            document.getElementById('grade').value = '';
+        }
+        
+        function sortTable(key) {
+            sortDirection[key] =!sortDirection[key];
+            students.sort((a, b) => {
+                if (key === 'grade') {
+                    return sortDirection[key]? b[key] - a[key] : a[key] - b[key];
+                }
+                return sortDirection[key]? 
+                    b[key].localeCompare(a[key]) : 
+                    a[key].localeCompare(b[key]);
+            });
+            displayStudents();
+        }
+        
+        function searchStudents() {
+            const query = document.getElementById('searchInput').value.toLowerCase();
+            const filtered = students.filter(s => 
+                s.name.toLowerCase().includes(query) || 
+                s.studentId.toLowerCase().includes(query) ||
+                s.course.toLowerCase().includes(query)
+            );
+            displayStudents(filtered);
+        }
+        
+        function exportCSV() {
+            if (students.length === 0) {
+                alert('No data to export');
+                return;
+            }
+            let csv = 'Name,Student ID,Course,Grade\n';
+            students.forEach(s => {
+                csv += `"${s.name}","${s.studentId}","${s.course}",${s.grade}\n`;
+            });
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'student_records.csv';
+            a.click();
+        }
+        
+        function updateStats() {
+            document.getElementById('totalStudents').textContent = students.length;
+            if (students.length > 0) {
+                const grades = students.map(s => s.grade);
+                const avg = grades.reduce((sum, g) => sum + g, 0) / grades.length;
+                const high = Math.max(...grades);
+                const low = Math.min(...grades);
+                document.getElementById('avgGrade').textContent = avg.toFixed(1);
+                document.getElementById('highGrade').textContent = high;
+                document.getElementById('lowGrade').textContent = low;
+            } else {
+                document.getElementById('avgGrade').textContent = '-';
+                document.getElementById('highGrade').textContent = '-';
+                document.getElementById('lowGrade').textContent = '-';
+            }
+        }
+        
+        function updateChart() {
+            const ctx = document.getElementById('gradeChart').getContext('2d');
+            const courses = [...new Set(students.map(s => s.course))];
+            const avgByCourse = courses.map(course => {
+                const courseStudents = students.filter(s => s.course === course);
+                return courseStudents.reduce((sum, s) => sum + s.grade, 0) / courseStudents.length;
+            });
+            
+            if (chart) chart.destroy();
+            if (courses.length > 0) {
+                chart = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: courses,
+                        datasets: [{
+                            label: 'Average Grade by Course',
+                            data: avgByCourse,
+                            backgroundColor: '#3b82f6',
+                            borderColor: '#1e40af',
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: { 
+                            y: { beginAtZero: true, max: 100, title: { display: true, text: 'Grade' } }
+                        },
+                        plugins: {
+                            legend: { display: false }
+                        }
+                    }
+                });
+            }
+        }
+        
+        displayStudents();
+    </script>
+</body>
+</html>
