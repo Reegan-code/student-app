@@ -7,6 +7,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { 
@@ -76,6 +77,8 @@
        .btn-export:hover { background: #047857; }
        .btn-pdf { background: #7c3aed; }
        .btn-pdf:hover { background: #6d28d9; }
+       .btn-qr { background: #ea580c; }
+       .btn-qr:hover { background: #c2410c; }
        .btn-secondary { background: #6b7280; }
        .btn-secondary:hover { background: #4b5563; }
        .controls {
@@ -125,6 +128,33 @@
             border-radius: 8px;
         }
         #searchInput { max-width: 300px; }
+       .qr-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.7);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+       .qr-content {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            text-align: center;
+            max-width: 400px;
+        }
+       .qr-content h3 { margin-bottom: 15px; color: #1e40af; }
+       .qr-content p { margin: 15px 0; color: #6b7280; font-size: 14px; }
+       .qr-content canvas { border: 2px solid #e5e7eb; border-radius: 8px; }
+       .close-qr { 
+            margin-top: 20px; 
+            background: #dc2626; 
+        }
+       .close-qr:hover { background: #b91c1c; }
     </style>
 </head>
 <body>
@@ -192,6 +222,7 @@
             <input type="text" id="searchInput" placeholder="Search by name, ID, or course..." onkeyup="searchStudents()">
             <button class="btn-export" onclick="exportCSV()">Export CSV</button>
             <button class="btn-pdf" onclick="exportPDF()">Export PDF</button>
+            <button class="btn-qr" onclick="showQRCode()">Show QR Code</button>
             <button class="btn-secondary" onclick="sortTable('name')">Sort by Name</button>
             <button class="btn-secondary" onclick="sortTable('grade')">Sort by Grade</button>
             <button class="btn-secondary" onclick="sortTable('course')">Sort by Course</button>
@@ -209,6 +240,15 @@
             </thead>
             <tbody id="tableBody"></tbody>
         </table>
+    </div>
+
+    <div id="qrModal" class="qr-modal" onclick="closeQR()">
+        <div class="qr-content" onclick="event.stopPropagation()">
+            <h3>Scan to Open App</h3>
+            <canvas id="qrcode"></canvas>
+            <p>https://reegan-code.github.io/student-app/</p>
+            <button class="close-qr" onclick="closeQR()">Close</button>
+        </div>
     </div>
 
     <script>
@@ -340,6 +380,27 @@
             });
             
             doc.save('student_records.pdf');
+        }
+
+        function showQRCode() {
+            const modal = document.getElementById('qrModal');
+            const canvas = document.getElementById('qrcode');
+            modal.style.display = 'flex';
+            
+            QRCode.toCanvas(canvas, 'https://reegan-code.github.io/student-app/', {
+                width: 256,
+                margin: 2,
+                color: {
+                    dark: '#1e40af',
+                    light: '#ffffff'
+                }
+            }, function (error) {
+                if (error) console.error(error);
+            });
+        }
+
+        function closeQR() {
+            document.getElementById('qrModal').style.display = 'none';
         }
         
         function updateStats() {
