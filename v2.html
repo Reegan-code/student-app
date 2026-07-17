@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Record Pro V2</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box}
+        body{font-family:-apple-system,BlinkMacSystemFont,sans-serif;background:#f0f2f5;padding:15px}
+       .container{max-width:900px;margin:0 auto;background:white;border-radius:16px;box-shadow:0 4px 20px rgba(0,0,0,0.08);overflow:hidden}
+       .header{background:linear-gradient(135deg,#667eea,#764ba2);color:white;padding:25px;text-align:center}
+       .header h1{font-size:26px}
+       .header p{opacity:.9;margin-top:5px;font-size:14px}
+       .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:15px;padding:20px;background:#f9fafb;border-bottom:1px solid #e5e7eb}
+       .stat-box{background:white;padding:15px;border-radius:10px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,0.05)}
+       .stat-box h3{font-size:22px;color:#667eea}
+       .stat-box span{font-size:12px;color:#6b7280}
+       .form-section{padding:20px;display:grid;grid-template-columns:1fr 1fr;gap:15px;border-bottom:1px solid #e5e7eb}
+       .full{grid-column:1 / -1}
+        label{display:block;margin-bottom:5px;font-weight:600;font-size:13px;color:#374151}
+        input,select{width:100%;padding:10px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:14px}
+        input:focus,select:focus{outline:none;border-color:#667eea;box-shadow:0 0 0 3px rgba(102,126,234,.1)}
+        button{background:#667eea;color:white;border:none;padding:12px;border-radius:8px;font-weight:600;cursor:pointer}
+        button:hover{background:#5a6fd6}
+       .btn-add{width:100%}
+       .tools{padding:15px 20px;display:flex;gap:10px;flex-wrap:wrap;border-bottom:1px solid #e5e7eb;background:#f9fafb}
+       .tools input{flex:1;min-width:200px}
+       .table-wrap{overflow-x:auto}
+        table{width:100%;border-collapse:collapse}
+        th{background:#f9fafb;padding:12px;text-align:left;font-size:12px;color:#6b7280;text-transform:uppercase;border-bottom:2px solid #e5e7eb}
+        td{padding:12px;border-bottom:1px solid #f3f4f6;font-size:14px}
+       .grade-pass{color:#10b981;font-weight:700}
+       .grade-fail{color:#ef4444;font-weight:700}
+       .badge{padding:3px 8px;border-radius:12px;font-size:11px;font-weight:600}
+       .badge-Active{background:#dcfce7;color:#166534}
+       .badge-Graduated{background:#dbeafe;color:#1e40af}
+       .badge-Suspended{background:#fee2e2;color:#991b1b}
+       .actions{display:flex;gap:5px}
+       .btn-sm{padding:6px 10px;font-size:12px;width:auto}
+       .btn-del{background:#ef4444}
+       .btn-edit{background:#f59e0b}
+       .empty{text-align:center;padding:40px;color:#9ca3af}
+       .toast{position:fixed;bottom:20px;right:20px;background:#10b981;color:white;padding:12px 18px;border-radius:8px;display:none;box-shadow:0 4px 12px rgba(0,0,0,.15);z-index:100}
+        @media(max-width:600px){.form-section{grid-template-columns:1fr}.stats{grid-template-columns:1fr}}
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <h1>🎓 Student Record Pro V2</h1>
+        <p id="status">Connecting...</p>
+    </div>
+    <div class="stats">
+        <div class="stat-box"><h3 id="totalStudents">0</h3><span>Total Students</span></div>
+        <div class="stat-box"><h3 id="avgGrade">0%</h3><span>Average Grade</span></div>
+        <div class="stat-box"><h3 id="passRate">0%</h3><span>Pass Rate (≥50%)</span></div>
+    </div>
+    <div class="form-section">
+        <div><label>Full Name</label><input type="text" id="full_name" placeholder="John Doe"></div>
+        <div><label>Student ID</label><input type="text" id="student_id" placeholder="STU001"></div>
+        <div><label>Email (Optional)</label><input type="email" id="email" placeholder="john@example.com"></div>
+        <div><label>Course</label><input type="text" id="course" placeholder="Computer Science"></div>
+        <div><label>Year of Study (1-6)</label><input type="number" id="year_of_study" min="1" max="6" placeholder="2"></div>
+        <div><label>Grade (0-100)</label><input type="number" id="grade" min="0" max="100" placeholder="85"></div>
+        <div><label>Status</label><select id="status_select"><option>Active</option><option>Graduated</option><option>Suspended</option><option>Inactive</option></select></div>
+        <div class="full"><button class="btn-add" id="addBtn" onclick="addStudent()">➕ Add Student</button></div>
+    </div>
+    <div class="tools">
+        <input type="text" id="search" placeholder="🔍 Search by name, ID, course..." oninput="filterStudents()">
+        <button onclick="exportCSV()" style="background:#10b981;width:auto">📥 Export CSV</button>
+    </div>
+    <div class="table-wrap">
+        <table>
+            <thead><tr><th>Name</th><th>ID</th><th>Course</th><th>Year</th><th>Grade</th><th>Status</th><th>Action</th></tr></thead>
+            <tbody id="tbody"><tr><td colspan="7" class="empty">Loading...</td></tr></tbody>
+        </table>
+    </div>
+</div>
+<div class="toast" id="toast"></div>
+<script>
+const SUPABASE_URL='https://tuudhnxqmnqxikqgmrzj.supabase.co';
+const SUPABASE_KEY='sb_publishable_61sdjEEXf09fMqQDz0ybPg_5_p-rPFx';
+const {createClient}=supabase;
+const db=createClient(SUPABASE_URL,SUPABASE_KEY);
+let allStudents=[];
+async function loadStudents(){
+  const {data,error}=await db.from('students_pro').select('*').order('created_at',{ascending:false});
+  if(error){document.getElementById('status').textContent='Error: '+error.message; return;}
+  allStudents=data; render(allStudents);
+  document.getElementById('status').textContent='● Online - Shared Live Database';
+}
+function render(list){
+  const tbody=document.getElementById('tbody');
+  document.getElementById('totalStudents').textContent=list.length;
+  if(list.length===0){tbody.innerHTML='<tr><td colspan="7" class="empty">No students yet. Add one above!</td></tr>';document.getElementById('avgGrade').textContent='0%';document.getElementById('passRate').textContent='0%';return;}
+  const avg=Math.round(list.reduce((a,b)=>a+b.grade,0)/list.length);
+  const pass=Math.round(list.filter(s=>s.grade>=50).length/list.length*100);
+  document.getElementById('avgGrade').textContent=avg+'%';
+  document.getElementById('passRate').textContent=pass+'%';
+  tbody.innerHTML=list.map(s=>`<tr>
+    <td><b>${s.full_name}</b><br><small style="color:#6b7280">${s.email||''}</small></td>
+    <td>${s.student_id}</td>
+    <td>${s.course}</td>
+    <td>Year ${s.year_of_study||'-'}</td>
+    <td class="${s.grade>=50?'grade-pass':'grade-fail'}">${s.grade}%</td>
+    <td><span class="badge badge-${s.status}">${s.status}</span></td>
+    <td><div class="actions"><button class="btn-sm btn-del" onclick="del(${s.id})">Del</button></div></td>
+  </tr>`).join('');
+}
+async function addStudent(){
+  const full_name=document.getElementById('full_name').value.trim();
+  const student_id=document.getElementById('student_id').value.trim();
+  const email=document.getElementById('email').value.trim()||null;
+  const course=document.getElementById('course').value.trim();
+  const year_of_study=parseInt(document.getElementById('year_of_study').value)||null;
+  const grade=parseInt(document.getElementById('grade').value);
+  const status=document.getElementById('status_select').value;
+  if(!full_name||!student_id||!course||isNaN(grade)){toast('Fill required fields',true);return;}
+  document.getElementById('addBtn').disabled=true;
+  const {error}=await db.from('students_pro').insert([{full_name,student_id,email,course,year_of_study,grade,status}]);
+  if(error){toast(error.message,true);document.getElementById('addBtn').disabled=false;return;}
+  toast('Student added!');
+  ['full_name','student_id','email','course','year_of_study','grade'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('addBtn').disabled=false;
+  loadStudents();
+}
+async function del(id){if(!confirm('Delete?'))return;await db.from('students_pro').delete().eq('id',id);toast('Deleted');loadStudents();}
+function filterStudents(){const q=document.getElementById('search').value.toLowerCase();render(allStudents.filter(s=>s.full_name.toLowerCase().includes(q)||s.student_id.toLowerCase().includes(q)||s.course.toLowerCase().includes(q)))}
+function exportCSV(){let csv='Full Name,Student ID,Email,Course,Year,Grade,Status\n';allStudents.forEach(s=>{csv+=`"${s.full_name}","${s.student_id}","${s.email||''}","${s.course}",${s.year_of_study||''},${s.grade},"${s.status}"\n`});const blob=new Blob([csv],{type:'text/csv'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='students_pro.csv';a.click();}
+function toast(m,e=false){const t=document.getElementById('toast');t.textContent=m;t.style.background=e?'#ef4444':'#10b981';t.style.display='block';setTimeout(()=>t.style.display='none',3000);}
+db.channel('pro').on('postgres_changes',{event:'*',schema:'public',table:'students_pro'},()=>loadStudents()).subscribe();
+loadStudents();
+</script>
+</body>
+</html>
